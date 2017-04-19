@@ -1,18 +1,31 @@
 #!/usr/bin/ruby
-dmg_file = ARGV[0]
-seek = ARGV[1].to_i
 
-File.open(dmg_file, 'r') do |file|
-  file.seek(seek, IO::SEEK_SET)
-  loop do
-    weight = file.read(2)
-    break if not weight
-    weight = weight.unpack('S')[0]
-    unknown = file.read(2).unpack('S')[0]
-    code_lenght = file.read(1).unpack('C')[0]
-    code = file.read(code_lenght)
-    text_lenght = file.read(1).unpack('C')[0]
-    text = file.read(text_lenght)
-    puts "#{code}\t#{text}\t#{weight}"
-  end
+file = ARGV[0]
+code = ARGV[1]
+text = ARGV[2]
+
+data = File.open(file, 'rb').read()
+pattern = code + (text.size * 3).chr + text
+offset = data.index(pattern.force_encoding('ASCII-8BIT')) - 5
+
+index = offset
+loop do
+  weight = data[index..index+1]
+  index = index + 2
+  weight = weight.unpack('S')[0]
+
+  index = index + 2 # unknown
+
+  code_lenght = data[index].unpack('C')[0]
+  index = index + 1
+  code = data[index..index+code_lenght-1]
+  index = index + code_lenght
+
+  text_lenght = data[index].unpack('C')[0]
+  index = index + 1
+  text = data[index..index+text_lenght-1]
+  index = index + text_lenght
+
+  puts "#{code}\t#{text}\t#{weight}"
+  break if index >= data.size
 end
